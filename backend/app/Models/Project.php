@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Enums\ProjectStatus;
+use App\Enums\ProjectPriority;
 
 class Project extends Model
 {
@@ -21,6 +23,8 @@ class Project extends Model
     ];
 
     protected $casts = [
+        'status' => ProjectStatus::class,
+        'priority' => ProjectPriority::class,
         'start_date' => 'date',
         'due_date' => 'date',
     ];
