@@ -2,6 +2,19 @@
 
 Client Project Tracker — a Laravel REST API (`backend/`) with a Next.js frontend (`frontend/`), built for the Full Stack Developer Technical Assessment.
 
+## Features Implemented
+
+- Full REST API for `projects` — all 5 `Route::apiResource` endpoints (list, create, show, update, delete)
+- `projects` schema and validation matching the spec: name, description, status, priority, start/due dates
+- Status (`Planning`, `In Progress`, `On Hold`, `Completed`) and priority (`Low`, `Medium`, `High`) as backed PHP enums
+- Pagination on `GET /projects` (`per_page` query param, default 10)
+- Token-based authentication via Laravel Passport (register, login, logout, Bearer tokens); all `/projects` routes protected behind `auth:api`
+- OpenAPI spec (`apidog.openapi.json`) covering both auth and project endpoints, with bearer token security scheme, for API testing via Apidog
+- Seeder with 12 sample projects
+- Next.js frontend — project list, card view, status/priority badges
+- Local development environment via Laravel Sail (PHP, PostgreSQL)
+- Production deployment setup: Docker Compose (multi-stage builds for backend/frontend) behind an existing Traefik reverse proxy, with shared external Postgres/Redis services
+
 ## Development Log
 
 - Scaffolded Laravel API structure (model, migration, controller, form requests, resource, factory, seeder)
@@ -110,7 +123,7 @@ docker compose -f docker-compose.prod.yml exec backend chown www-data:www-data \
 - **Auth:** Laravel Passport (Bearer tokens) — chosen over Sanctum for OAuth2 compliance; protects all `/projects` routes
 - **Local dev:** Laravel Sail (Docker) for the backend
 
-## Assumptions
+## Assumptions Made
 
 - Status values: `Planning`, `In Progress`, `On Hold`, `Completed`. Priority values: `Low`, `Medium`, `High` — stored as backed PHP enums, matching the spec exactly.
 - `status` and dates are independent fields — a project can be marked `Completed` with a `due_date` in the future (e.g. finished ahead of schedule). Only `due_date >= start_date` is enforced, per the spec.
@@ -119,4 +132,17 @@ docker compose -f docker-compose.prod.yml exec backend chown www-data:www-data \
 
 ## Technical Reflection
 
-_TODO: answer the assessment's reflection questions (approach, tradeoffs, improvements, challenges, AI tool usage)._
+**Approach.** Built the API first: model, migration, controller, form requests, resource, factory, and seeder for `projects`, scaffolded with `artisan make:*` rather than hand-written, then `Route::apiResource` for all 5 REST endpoints. Status and priority went in as backed PHP enums to match the spec exactly. Auth came next — `php artisan install:api` plus Laravel Passport, chosen over a simpler token approach for OAuth2 compliance, with all `/projects` routes protected behind `auth:api`. Local development ran on Laravel Sail (Docker) rather than a bare PHP install, so the dev environment stays close to how production would run. The frontend is Next.js rather than my usual React + Inertia, since Next paired better with a plain REST API and matches the assessment's stated stack. Production deployment reused Docker Compose + Traefik patterns from two of my other self-hosted projects, attaching to an already-running Traefik instance and shared external Postgres/Redis rather than provisioning new ones.
+
+**Tradeoffs.** Skipped a `ProjectPolicy`-based authorization layer — I generated one (`make:policy ProjectPolicy`) but backed out once I realized doing it properly (the way I've done it before, with wildcard permissions) would need a full roles-and-permissions system, which felt like more scope than this assessment calls for. Skipped implementing a second Passport OAuth grant type (password grant) for the same reason: not worth adding without an actual case for it. `GET /projects` is paginated (`per_page`, default 10) instead of returning everything unbounded, since that's the safer default for a list endpoint even though the spec didn't require it.
+
+**Challenges.** Production deployment surfaced most of the real problems, almost all permissions-related in one way or another:
+- Postgres 15+'s ownership model: creating the `koda` database as the `postgres` superuser left the `public` schema owned by `pg_database_owner`, so the app's own DB user had no rights on it until the database was explicitly re-owned to that user (`ALTER DATABASE koda OWNER TO <user>`) — running `ALTER SCHEMA public OWNER TO <user>` alone wasn't enough on its own the first time, since the app user still wasn't a member of `pg_database_owner`.
+- Passport's `passport:keys` and `passport:client` were run via `docker compose exec`, which defaults to `root` — leaving `storage/oauth-*.key` (and, incidentally, `storage/logs/laravel.log`) owned by `root` while PHP-FPM's actual worker processes run as `www-data`. The result was a 500 on every login/register with zero error output anywhere, since Laravel's own attempt to log the exception failed silently too. Root-caused by comparing an in-process `tinker` run (worked, ran as root) against the real HTTP path (failed, ran as `www-data`) with identical input.
+- PHP 8.4 vs 8.3: `composer.lock` had been resolved against PHP 8.4, but the production Dockerfile was still pinned to `php:8.3-fpm-alpine`, so the container refused to boot at all until the base image was bumped.
+- Traefik routing: the app's routers only referenced the `websecure` (443) entrypoint, so I added `web` (80) explicitly alongside it.
+- More generally: shared infrastructure (one Postgres, one Redis, one Traefik instance serving several unrelated projects on the same host) means fixes in this app can't assume they're the only workload — the DB and schema-ownership commands especially had to be scoped narrowly to avoid touching other projects' data.
+
+**Improvements, given more time.** Move `fakerphp/faker` back to `require-dev` and replace the demo `db:seed` step with a non-Faker way to load reference data — it's currently in `require` purely so seeding works in a `--no-dev` production build, which isn't something that should ship long-term. Add a real roles/permissions layer if multi-user access control ever becomes a requirement, rather than the current single-tier `auth:api` gate. Bake the `www-data` ownership fix into `startup.sh` so a fresh `passport:keys` run can't silently regress into the same root-owned-file bug. Self-hosting on my own hardware is also a real risk noted in `Thoughts.md` — a power outage takes the whole thing down, which wouldn't be true on managed infrastructure.
+
+**AI tool usage.** Used Claude and Gemini for brainstorming and as a sounding board throughout, but typed the setup commands manually rather than letting AI run them — partly to keep the sequence in my own head rather than outsourcing it entirely. Leaned on AI more heavily for the frontend UI (styling, component layout) since that's less central to what this assessment is evaluating, and for live debugging during the production deploy — walking through the Postgres ownership issue and the Passport permissions issue together, verifying each hypothesis against actual container/log output rather than accepting a guess.

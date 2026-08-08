@@ -61,3 +61,5 @@ holy, laravel deployment has a lot of permission errors
 psql -u postgres -d koda -c "ALTER SCHEMA public OWNER to humfurie;
 
 damn, so it needs to manually create table first? then alter it later?
+
+passport permission is preventing the server from running costing about 2 hours of debugging
