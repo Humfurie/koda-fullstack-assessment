@@ -18,6 +18,8 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->enum('status', ['planning', 'in_progress', 'on_hold', 'completed'])->default('pending');
             $table->enum('priority', ['low', 'medium', 'high'])->default('medium');
+            $table->date('start_date');
+            $table->date('due_date');
             $table->timestamps();
         });
     }
