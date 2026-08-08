@@ -21,7 +21,7 @@ RUN composer dump-autoload --optimize --classmap-authoritative --no-dev
 # ================================
 # Stage 2: Runtime
 # ================================
-FROM php:8.3-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 WORKDIR /var/www/html
 
