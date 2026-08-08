@@ -23,7 +23,13 @@ class UpdateProjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'client_name' => ['required', 'string', 'max:255'],
+            'project_name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'status' => ['required', 'string', 'in:planning,in_progress,on_hold,completed'],
+            'priority' => ['required', 'string', 'in:low,medium,high'],
+            'start_date' => ['required', 'date'],
+            'due_date' => ['required', 'date', 'after_or_equal:start_date'],
         ];
     }
 }
