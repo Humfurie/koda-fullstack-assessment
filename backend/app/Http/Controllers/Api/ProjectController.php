@@ -14,9 +14,12 @@ class ProjectController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $projects = Project::query()->paginate(10);
+        $perPage = (int) $request->query('per_page', 9);
+        $perPage = max(1, min($perPage, 50));
+
+        $projects = Project::query()->paginate($perPage);
         return response()->json($projects);
     }
 

@@ -25,6 +25,8 @@ type ModalState =
   | { type: "view"; project: Project }
   | { type: "delete"; project: Project };
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
+
 export default function ProjectsPage() {
   const { user, token, isLoading: isAuthLoading, logout } = useAuth();
   const router = useRouter();
@@ -33,6 +35,7 @@ export default function ProjectsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -55,7 +58,7 @@ export default function ProjectsPage() {
       setLoadError(null);
       try {
         const res = await api.get<PaginatedResponse<Project>>(
-          `/projects?page=${page}`,
+          `/projects?page=${page}&per_page=${pageSize}`,
           token,
         );
         setProjects(res.data);
@@ -68,11 +71,11 @@ export default function ProjectsPage() {
         setIsLoading(false);
       }
     },
-    [token],
+    [token, pageSize],
   );
 
   useEffect(() => {
-    // Fetch on mount / when the auth token becomes available; fetchProjects owns its own setState calls.
+    // Fetch on mount / when the auth token or page size changes; fetchProjects owns its own setState calls.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (token) fetchProjects(1);
   }, [token, fetchProjects]);
@@ -149,7 +152,7 @@ export default function ProjectsPage() {
   return (
     <div className="flex min-h-full flex-col bg-background">
       <header className="bg-koda-navy">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-baseline gap-1">
             <span className="text-lg font-bold tracking-tight text-white">KODA</span>
             <span className="text-lg font-light tracking-tight text-koda-teal">Projects</span>
@@ -173,20 +176,39 @@ export default function ProjectsPage() {
       </header>
 
       <div className="bg-gradient-to-r from-koda-gold to-koda-teal">
-        <div className="mx-auto max-w-6xl px-6 py-3 text-sm text-white/90">
+        <div className="mx-auto max-w-7xl px-6 py-3 text-sm text-white/90">
           Tracking every client engagement in one place.
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
-            Client <span className="text-koda-teal">Projects</span>
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {total} project{total === 1 ? "" : "s"} total &middot; showing page {currentPage} of{" "}
-            {lastPage}
-          </p>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
+              Client <span className="text-koda-teal">Projects</span>
+            </h1>
+            <p className="mt-1 text-sm text-zinc-500">
+              {total} project{total === 1 ? "" : "s"} total &middot; showing page {currentPage} of{" "}
+              {lastPage}
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-zinc-500">
+            Per page
+            <select
+              value={pageSize}
+              onChange={(e) =>
+                setPageSize(Number(e.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])
+              }
+              className="rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-700 outline-none transition-colors focus:border-koda-teal focus:ring-2 focus:ring-koda-teal/20"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="mb-8">
@@ -218,7 +240,7 @@ export default function ProjectsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
             {filteredProjects.map((project) => (
               <ProjectCard
                 key={project.id}
@@ -239,7 +261,7 @@ export default function ProjectsPage() {
       </main>
 
       <footer className="bg-koda-navy py-6">
-        <div className="mx-auto max-w-6xl px-6 text-center text-xs text-white/40">
+        <div className="mx-auto max-w-7xl px-6 text-center text-xs text-white/40">
           KODA Kollectiv &middot; Client Project Tracker
         </div>
       </footer>

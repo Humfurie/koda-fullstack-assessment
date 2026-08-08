@@ -19,18 +19,20 @@ export function ProjectCard({
       <div className="h-1.5 w-full bg-gradient-to-r from-koda-gold to-koda-teal" />
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-koda-teal">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold uppercase tracking-wide text-koda-teal">
               {project.client_name}
             </p>
             <button
               onClick={() => onView(project)}
-              className="mt-0.5 text-left text-lg font-semibold leading-snug text-zinc-900 hover:text-koda-teal-dark"
+              className="mt-0.5 line-clamp-2 text-left text-lg font-semibold leading-snug text-zinc-900 hover:text-koda-teal-dark"
             >
               {project.project_name}
             </button>
           </div>
-          <StatusBadge status={project.status} />
+          <div className="shrink-0">
+            <StatusBadge status={project.status} />
+          </div>
         </div>
 
         {project.description && (
@@ -39,8 +41,8 @@ export function ProjectCard({
           </p>
         )}
 
-        <div className="mt-auto flex items-center justify-between pt-2 font-mono text-xs text-zinc-500">
-          <span>
+        <div className="mt-auto flex flex-col gap-2 pt-2">
+          <span className="font-mono text-xs text-zinc-500">
             {formatDisplayDate(project.start_date)} &rarr; {formatDisplayDate(project.due_date)}
           </span>
           <PriorityBadge priority={project.priority} />
