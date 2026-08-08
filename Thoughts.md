@@ -55,3 +55,9 @@ the traefik is already automatic since this will be on my self-hosted server
 I'm sorry if there's a power outage, this site will be gone
 
 I was planning to add oauth, but it is not worth it. If I was learning how, it would've been implemented
+
+holy, laravel deployment has a lot of permission errors
+
+psql -u postgres -d koda -c "ALTER SCHEMA public OWNER to humfurie;
+
+damn, so it needs to manually create table first? then alter it later?
