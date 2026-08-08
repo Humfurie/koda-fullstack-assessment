@@ -1,36 +1,41 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { PROJECT_PRIORITIES, PROJECT_STATUSES, Project, ProjectInput } from "@/lib/types";
+import {
+  PRIORITY_LABELS,
+  PROJECT_PRIORITIES,
+  PROJECT_STATUSES,
+  Project,
+  ProjectInput,
+  STATUS_LABELS,
+} from "@/lib/types";
 import { Modal } from "./Modal";
+import { toDateInputValue } from "@/lib/date";
 
 const EMPTY_FORM: ProjectInput = {
-  clientName: "",
-  projectName: "",
+  client_name: "",
+  project_name: "",
   description: "",
-  status: "Planning",
-  priority: "Medium",
-  startDate: "",
-  dueDate: "",
+  status: "planning",
+  priority: "medium",
+  start_date: "",
+  due_date: "",
 };
 
 type FormErrors = Partial<Record<keyof ProjectInput, string>>;
 
-/**
- * TODO(you): implement field validation for the project form.
- *
- * This drives real UX decisions the rest of the form defers to you:
- *  - Which fields are required beyond the OpenAPI `required` list
- *    (clientName, projectName, status, priority, startDate, dueDate)?
- *  - Should dueDate < startDate block submission, or just warn?
- *  - Any length limits worth enforcing client-side before hitting the API?
- *
- * Return an object keyed by ProjectInput field names -> error message.
- * An empty object means the form is valid.
- */
 function validate(form: ProjectInput): FormErrors {
-  // TODO(you): replace with real validation logic.
-  return {};
+  const errors: FormErrors = {};
+
+  if (!form.client_name.trim()) errors.client_name = "Client name is required.";
+  if (!form.project_name.trim()) errors.project_name = "Project name is required.";
+  if (!form.start_date) errors.start_date = "Start date is required.";
+  if (!form.due_date) errors.due_date = "Due date is required.";
+  if (form.start_date && form.due_date && form.due_date < form.start_date) {
+    errors.due_date = "Due date can't be before the start date.";
+  }
+
+  return errors;
 }
 
 const inputClass =
@@ -42,25 +47,36 @@ export function ProjectFormModal({
   project,
   onClose,
   onSubmit,
+  isSubmitting = false,
+  serverErrors = {},
 }: {
   project?: Project;
   onClose: () => void;
   onSubmit: (input: ProjectInput) => void;
+  isSubmitting?: boolean;
+  serverErrors?: Record<string, string[]>;
 }) {
   const [form, setForm] = useState<ProjectInput>(
     project
       ? {
-          clientName: project.clientName,
-          projectName: project.projectName,
+          client_name: project.client_name,
+          project_name: project.project_name,
           description: project.description ?? "",
           status: project.status,
           priority: project.priority,
-          startDate: project.startDate,
-          dueDate: project.dueDate,
+          start_date: toDateInputValue(project.start_date),
+          due_date: toDateInputValue(project.due_date),
         }
       : EMPTY_FORM,
   );
   const [errors, setErrors] = useState<FormErrors>({});
+
+  const mergedErrors: FormErrors = {
+    ...errors,
+    ...Object.fromEntries(
+      Object.entries(serverErrors).map(([key, messages]) => [key, messages[0]]),
+    ),
+  };
 
   function update<K extends keyof ProjectInput>(key: K, value: ProjectInput[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -82,24 +98,24 @@ export function ProjectFormModal({
             <label className={labelClass}>Client name</label>
             <input
               className={inputClass}
-              value={form.clientName}
-              onChange={(e) => update("clientName", e.target.value)}
+              value={form.client_name}
+              onChange={(e) => update("client_name", e.target.value)}
               placeholder="Acme Corporation"
             />
-            {errors.clientName && (
-              <p className="text-xs text-red-600">{errors.clientName}</p>
+            {mergedErrors.client_name && (
+              <p className="text-xs text-red-600">{mergedErrors.client_name}</p>
             )}
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Project name</label>
             <input
               className={inputClass}
-              value={form.projectName}
-              onChange={(e) => update("projectName", e.target.value)}
+              value={form.project_name}
+              onChange={(e) => update("project_name", e.target.value)}
               placeholder="Website Redesign"
             />
-            {errors.projectName && (
-              <p className="text-xs text-red-600">{errors.projectName}</p>
+            {mergedErrors.project_name && (
+              <p className="text-xs text-red-600">{mergedErrors.project_name}</p>
             )}
           </div>
         </div>
@@ -124,7 +140,7 @@ export function ProjectFormModal({
             >
               {PROJECT_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {STATUS_LABELS[s]}
                 </option>
               ))}
             </select>
@@ -138,7 +154,7 @@ export function ProjectFormModal({
             >
               {PROJECT_PRIORITIES.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {PRIORITY_LABELS[p]}
                 </option>
               ))}
             </select>
@@ -151,20 +167,24 @@ export function ProjectFormModal({
             <input
               type="date"
               className={inputClass}
-              value={form.startDate}
-              onChange={(e) => update("startDate", e.target.value)}
+              value={form.start_date}
+              onChange={(e) => update("start_date", e.target.value)}
             />
-            {errors.startDate && <p className="text-xs text-red-600">{errors.startDate}</p>}
+            {mergedErrors.start_date && (
+              <p className="text-xs text-red-600">{mergedErrors.start_date}</p>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Due date</label>
             <input
               type="date"
               className={inputClass}
-              value={form.dueDate}
-              onChange={(e) => update("dueDate", e.target.value)}
+              value={form.due_date}
+              onChange={(e) => update("due_date", e.target.value)}
             />
-            {errors.dueDate && <p className="text-xs text-red-600">{errors.dueDate}</p>}
+            {mergedErrors.due_date && (
+              <p className="text-xs text-red-600">{mergedErrors.due_date}</p>
+            )}
           </div>
         </div>
 
@@ -178,9 +198,10 @@ export function ProjectFormModal({
           </button>
           <button
             type="submit"
-            className="rounded-full bg-koda-teal px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-koda-teal-dark"
+            disabled={isSubmitting}
+            className="rounded-full bg-koda-teal px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-koda-teal-dark disabled:opacity-60"
           >
-            {project ? "Save changes" : "Create project"}
+            {isSubmitting ? "Saving…" : project ? "Save changes" : "Create project"}
           </button>
         </div>
       </form>

@@ -14,8 +14,9 @@ export function ConfirmDeleteModal({
     <Modal title="Delete project" onClose={onCancel} maxWidthClass="max-w-sm">
       <div className="flex flex-col gap-5">
         <p className="text-sm leading-relaxed text-zinc-600">
-          This removes <span className="font-semibold text-zinc-900">{project.projectName}</span>{" "}
-          for {project.clientName}. This can&apos;t be undone.
+          This removes{" "}
+          <span className="font-semibold text-zinc-900">{project.project_name}</span> for{" "}
+          {project.client_name}. This can&apos;t be undone.
         </p>
         <div className="flex justify-end gap-2">
           <button

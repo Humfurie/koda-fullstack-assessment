@@ -1,14 +1,7 @@
 import { Project } from "@/lib/types";
+import { formatDisplayDate } from "@/lib/date";
 import { StatusBadge } from "./StatusBadge";
 import { PriorityBadge } from "./PriorityBadge";
-
-function formatDate(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export function ProjectCard({
   project,
@@ -28,13 +21,13 @@ export function ProjectCard({
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-koda-teal">
-              {project.clientName}
+              {project.client_name}
             </p>
             <button
               onClick={() => onView(project)}
               className="mt-0.5 text-left text-lg font-semibold leading-snug text-zinc-900 hover:text-koda-teal-dark"
             >
-              {project.projectName}
+              {project.project_name}
             </button>
           </div>
           <StatusBadge status={project.status} />
@@ -48,7 +41,7 @@ export function ProjectCard({
 
         <div className="mt-auto flex items-center justify-between pt-2 font-mono text-xs text-zinc-500">
           <span>
-            {formatDate(project.startDate)} &rarr; {formatDate(project.dueDate)}
+            {formatDisplayDate(project.start_date)} &rarr; {formatDisplayDate(project.due_date)}
           </span>
           <PriorityBadge priority={project.priority} />
         </div>

@@ -1,4 +1,11 @@
-import { PROJECT_PRIORITIES, PROJECT_STATUSES, ProjectPriority, ProjectStatus } from "@/lib/types";
+import {
+  PRIORITY_LABELS,
+  PROJECT_PRIORITIES,
+  PROJECT_STATUSES,
+  ProjectPriority,
+  ProjectStatus,
+  STATUS_LABELS,
+} from "@/lib/types";
 
 interface FilterBarProps {
   search: string;
@@ -39,7 +46,7 @@ export function FilterBar({
         <option value="All">All statuses</option>
         {PROJECT_STATUSES.map((s) => (
           <option key={s} value={s}>
-            {s}
+            {STATUS_LABELS[s]}
           </option>
         ))}
       </select>
@@ -51,7 +58,7 @@ export function FilterBar({
         <option value="All">All priorities</option>
         {PROJECT_PRIORITIES.map((p) => (
           <option key={p} value={p}>
-            {p}
+            {PRIORITY_LABELS[p]}
           </option>
         ))}
       </select>

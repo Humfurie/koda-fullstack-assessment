@@ -1,15 +1,15 @@
-import { ProjectPriority } from "@/lib/types";
+import { PRIORITY_LABELS, ProjectPriority } from "@/lib/types";
 
 const PRIORITY_STYLES: Record<ProjectPriority, string> = {
-  Low: "text-zinc-500",
-  Medium: "text-koda-gold",
-  High: "text-koda-teal",
+  low: "text-zinc-500",
+  medium: "text-koda-gold",
+  high: "text-koda-teal",
 };
 
 const PRIORITY_DOTS: Record<ProjectPriority, number> = {
-  Low: 1,
-  Medium: 2,
-  High: 3,
+  low: 1,
+  medium: 2,
+  high: 3,
 };
 
 export function PriorityBadge({ priority }: { priority: ProjectPriority }) {
@@ -26,7 +26,7 @@ export function PriorityBadge({ priority }: { priority: ProjectPriority }) {
           />
         ))}
       </span>
-      {priority}
+      {PRIORITY_LABELS[priority]}
     </span>
   );
 }

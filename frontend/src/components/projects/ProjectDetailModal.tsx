@@ -1,15 +1,8 @@
-import { Project } from "@/lib/types";
+import { Project, STATUS_LABELS } from "@/lib/types";
+import { formatDisplayDate } from "@/lib/date";
 import { Modal } from "./Modal";
 import { StatusBadge } from "./StatusBadge";
 import { PriorityBadge } from "./PriorityBadge";
-
-function formatDate(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export function ProjectDetailModal({
   project,
@@ -26,10 +19,10 @@ export function ProjectDetailModal({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-koda-teal">
-              {project.clientName}
+              {project.client_name}
             </p>
             <h3 className="mt-0.5 text-xl font-semibold text-zinc-900">
-              {project.projectName}
+              {project.project_name}
             </h3>
           </div>
           <StatusBadge status={project.status} />
@@ -48,15 +41,19 @@ export function ProjectDetailModal({
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wide text-zinc-400">Status</dt>
-            <dd className="mt-1 text-zinc-800">{project.status}</dd>
+            <dd className="mt-1 text-zinc-800">{STATUS_LABELS[project.status]}</dd>
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wide text-zinc-400">Start date</dt>
-            <dd className="mt-1 font-mono text-zinc-800">{formatDate(project.startDate)}</dd>
+            <dd className="mt-1 font-mono text-zinc-800">
+              {formatDisplayDate(project.start_date, { month: "long", day: "numeric", year: "numeric" })}
+            </dd>
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wide text-zinc-400">Due date</dt>
-            <dd className="mt-1 font-mono text-zinc-800">{formatDate(project.dueDate)}</dd>
+            <dd className="mt-1 font-mono text-zinc-800">
+              {formatDisplayDate(project.due_date, { month: "long", day: "numeric", year: "numeric" })}
+            </dd>
           </div>
         </dl>
 
