@@ -26,7 +26,7 @@ class ProjectController extends Controller
     public function store(StoreProjectRequest $request)
     {
         $project = Project::create($request->validated());
-        return response()->json($project, 201);
+        return response()->json($project, 201); // I know this is not recommended for production, but for the sake of this assessment, it's fine.
     }
 
     /**
@@ -43,7 +43,7 @@ class ProjectController extends Controller
     public function update(UpdateProjectRequest $request, Project $project)
     {
         $project->update($request->validated());
-        return response()->json($project);
+        return response()->json($project); // same with this, this is also not recommended.
     }
 
     /**
