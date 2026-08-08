@@ -16,8 +16,8 @@ class ProjectController extends Controller
      */
     public function index(Request $request)
     {
-        $perPage = (int) $request->query('per_page', 9);
-        $perPage = max(1, min($perPage, 50));
+        $perPage = (int) $request->query('per_page', 10);
+        $perPage = max(1, min($perPage, 100));
 
         $projects = Project::query()->paginate($perPage);
         return response()->json($projects);
