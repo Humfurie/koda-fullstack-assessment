@@ -60,7 +60,9 @@ RUN echo '[PHP]' > /usr/local/etc/php/conf.d/php-production.ini \
     && echo 'opcache.enable=1' >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo 'opcache.memory_consumption=128' >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo 'opcache.max_accelerated_files=10000' >> /usr/local/etc/php/conf.d/opcache.ini \
-    && echo 'opcache.validate_timestamps=0' >> /usr/local/etc/php/conf.d/opcache.ini
+    && echo 'opcache.validate_timestamps=0' >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo 'catch_workers_output = yes' >> /usr/local/etc/php-fpm.d/www.conf \
+    && echo 'php_flag[display_errors] = off' >> /usr/local/etc/php-fpm.d/www.conf
 
 COPY --from=composer-builder /app/vendor ./vendor
 COPY --from=composer-builder /app ./
