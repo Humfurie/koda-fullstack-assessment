@@ -1,0 +1,122 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: docker/production/Dockerfile
+    image: koda-backend:latest
+    restart: unless-stopped
+    volumes:
+      - backend-storage:/var/www/html/storage
+    env_file:
+      - ./backend/.env.production
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=pgsql
+      - DB_HOST=shared-postgres
+      - DB_PORT=5432
+      - REDIS_HOST=shared-redis
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
+      - CACHE_STORE=redis
+      - SESSION_DRIVER=redis
+    networks:
+      - laravel
+      - proxy
+      - shared-postgres
+      - shared-redis
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'traefik.http.services.koda-backend.loadbalancer.server.port=80'
+      - 'traefik.http.routers.koda-backend.rule=Host(`koda.humfurie.org`) && PathPrefix(`/api`)'
+      - 'traefik.http.routers.koda-backend.entrypoints=websecure'
+      - 'traefik.http.routers.koda-backend.tls=true'
+      - 'traefik.http.routers.koda-backend.tls.certresolver=letsencrypt'
+      - 'traefik.http.routers.koda-backend.priority=10'
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  backend-worker:
+    image: koda-backend:latest
+    restart: unless-stopped
+    command: ['php', 'artisan', 'queue:work', 'redis', '--sleep=3', '--tries=3', '--max-time=3600']
+    env_file:
+      - ./backend/.env.production
+    environment:
+      - APP_ENV=production
+      - DB_CONNECTION=pgsql
+      - DB_HOST=shared-postgres
+      - DB_PORT=5432
+      - REDIS_HOST=shared-redis
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
+    networks:
+      - laravel
+      - shared-postgres
+      - shared-redis
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: docker/production/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://koda.humfurie.org/api
+    image: koda-frontend:latest
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    networks:
+      - laravel
+      - proxy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/ || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'traefik.http.services.koda-frontend.loadbalancer.server.port=3000'
+      - 'traefik.http.routers.koda-frontend.rule=Host(`koda.humfurie.org`)'
+      - 'traefik.http.routers.koda-frontend.entrypoints=websecure'
+      - 'traefik.http.routers.koda-frontend.tls=true'
+      - 'traefik.http.routers.koda-frontend.tls.certresolver=letsencrypt'
+      - 'traefik.http.routers.koda-frontend.priority=1'
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+networks:
+  laravel:
+    driver: bridge
+  proxy:
+    external: true
+    name: proxy
+  shared-postgres:
+    external: true
+  shared-redis:
+    external: true
+
+volumes:
+  backend-storage:
+    driver: local
