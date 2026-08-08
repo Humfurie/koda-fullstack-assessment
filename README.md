@@ -50,16 +50,58 @@ Deployed to a self-hosted server (`koda.humfurie.org`). Production runs as three
 
 **Deploy steps:**
 
-1. SSH into the server and pull the repo.
+1. SSH into the server and clone the repo (or `git pull` if it's already there):
+   ```bash
+   git clone <repo-url> koda-fullstack-assessment
+   cd koda-fullstack-assessment
+   ```
 2. Copy `backend/.env.production.example` → `backend/.env.production` and fill in real values — DB credentials, and R2 credentials under the `AWS_*` keys (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET`, `AWS_ENDPOINT`).
 3. Copy `frontend/.env.production.example` → `frontend/.env.production` and fill in real values.
-4. Confirm the external Docker networks already exist on the host: `proxy`, `shared-postgres`, `shared-redis`.
-5. Build and start: `docker compose -f docker-compose.prod.yml up -d --build`.
-6. Generate the app key on first deploy if `APP_KEY` is empty: `docker compose -f docker-compose.prod.yml exec backend php artisan key:generate --force`.
-7. Run migrations: `docker compose -f docker-compose.prod.yml exec backend php artisan migrate --force`.
-8. Create the Passport personal access client (required for login/register to issue tokens): `docker compose -f docker-compose.prod.yml exec backend php artisan passport:client --personal --no-interaction`.
+4. Confirm the external Docker networks already exist on the host: `proxy`, `shared-postgres`, `shared-redis`. `shared-postgres` is a single Postgres server shared across multiple projects on the host — this repo doesn't provision or own it, so the app's database has to be created there manually the first time:
+   ```bash
+   docker exec -it shared-postgres psql -U postgres -d postgres -c "CREATE DATABASE koda;"
+   docker exec -it shared-postgres psql -U postgres -d koda -c "ALTER DATABASE koda OWNER TO <db_user>;"
+   ```
+   The `ALTER DATABASE ... OWNER TO` step matters on Postgres 15+: `CREATE DATABASE` alone leaves the `public` schema owned by `pg_database_owner`, and the app's non-superuser DB user won't have `CREATE` rights on it until it's made the database owner — otherwise migrations fail with `permission denied for schema public`.
+5. Build and start all services:
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --build
+   ```
+6. Shell into the backend container as `www-data` (not root — see the Passport caveat below) and run first-deploy setup from inside:
+   ```bash
+   docker compose -f docker-compose.prod.yml exec -u www-data backend sh
+   ```
+   Then, inside that shell:
+   ```sh
+   php artisan key:generate --force      # only if APP_KEY is empty
+   php artisan migrate
+   php artisan db:seed                   # optional, see Faker caveat below
+   php artisan passport:keys
+   php artisan passport:client --personal --name="koda Personal Access Client"
+   exit
+   ```
 
 Traefik picks up the new containers automatically via Docker labels — no manual proxy config needed.
+
+For subsequent deploys (code already migrated/seeded once), steps 5 and a plain `php artisan migrate --force` for any new migrations are usually all that's needed — skip `db:seed` and the Passport key/client steps unless the database or `storage/oauth-*.key` files were reset.
+
+### Troubleshooting: login/register return a silent 500
+
+**Symptom:** `/api/login` and `/api/register` return `{"message":"Server Error"}` (500) with valid credentials, but nothing appears in `storage/logs/laravel.log` — even though the exact same request succeeds when run in-process via `artisan tinker`.
+
+**Cause:** `php artisan passport:keys` (and `passport:client`) were run via `docker compose exec`, which runs as `root` inside the container by default. That leaves `storage/oauth-private.key` and `storage/oauth-public.key` owned by `root`. PHP-FPM's actual worker processes run as `www-data`, so real HTTP requests can't read the private key to sign a token — `createToken()` throws, and because the failure happens while Laravel is also trying (and failing) to write the exception to `laravel.log` — which was *also* root-owned from the same `docker compose exec` sessions — the error gets swallowed silently instead of logged.
+
+**Fix applied:**
+```bash
+docker compose -f docker-compose.prod.yml exec backend chown www-data:www-data \
+  storage/oauth-private.key storage/oauth-public.key storage/logs/laravel.log
+```
+
+**Prevention:** run `passport:keys`, `passport:client`, and any other `artisan` command that writes to `storage/` as the `www-data` user, not root — e.g. `docker compose exec -u www-data backend php artisan passport:keys`. Step 8/9 above already reflect this.
+
+### Known caveat: `db:seed` requires Faker in production
+
+`fakerphp/faker` is currently listed under `require` (not `require-dev`) in `backend/composer.json` so that `php artisan db:seed` works in production for this assessment/demo deployment (production builds run `composer install --no-dev`, which skips `require-dev` packages). This is only a stopgap — Faker is a dev/testing tool and shouldn't ship in a real production `vendor/` directory. Before this app leaves the assessment/demo stage: move `fakerphp/faker` back to `require-dev`, drop `php artisan db:seed` from the deploy process, and seed any needed reference data via a dedicated, non-Faker seeder or a one-time SQL import instead.
 
 ## Technology Choices
 
